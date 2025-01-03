@@ -16,10 +16,16 @@ var (
 		[]string{"groupname"},
 		nil)
 
+	numprocsUser = prometheus.NewDesc(
+		"namedprocess_namegroup_num_procs_user",
+		"number of processes in this group",
+		[]string{"groupname", "username"},
+		nil)
+
 	cpuSecsDesc = prometheus.NewDesc(
 		"namedprocess_namegroup_cpu_seconds_total",
 		"Cpu user usage in seconds",
-		[]string{"groupname", "mode"},
+		[]string{"groupname", "mode", "user"},
 		nil)
 
 	readBytesDesc = prometheus.NewDesc(
@@ -55,7 +61,7 @@ var (
 	membytesDesc = prometheus.NewDesc(
 		"namedprocess_namegroup_memory_bytes",
 		"number of bytes of memory in use",
-		[]string{"groupname", "memtype"},
+		[]string{"groupname", "memtype", "user"},
 		nil)
 
 	openFDsDesc = prometheus.NewDesc(
@@ -215,6 +221,7 @@ func NewProcessCollector(options ProcessCollectorOption) (*NamedProcessCollector
 func (p *NamedProcessCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- cpuSecsDesc
 	ch <- numprocsDesc
+	ch <- numprocsUser
 	ch <- readBytesDesc
 	ch <- writeBytesDesc
 	ch <- membytesDesc
@@ -263,12 +270,14 @@ func (p *NamedProcessCollector) scrape(ch chan<- prometheus.Metric) {
 		for gname, gcounts := range groups {
 			ch <- prometheus.MustNewConstMetric(numprocsDesc,
 				prometheus.GaugeValue, float64(gcounts.Procs), gname)
+			ch <- prometheus.MustNewConstMetric(numprocsUser, prometheus.GaugeValue,
+				float64(gcounts.Procs), gname, gcounts.Username)
 			ch <- prometheus.MustNewConstMetric(membytesDesc,
-				prometheus.GaugeValue, float64(gcounts.Memory.ResidentBytes), gname, "resident")
+				prometheus.GaugeValue, float64(gcounts.Memory.ResidentBytes), gname, "resident", gcounts.Username)
 			ch <- prometheus.MustNewConstMetric(membytesDesc,
-				prometheus.GaugeValue, float64(gcounts.Memory.VirtualBytes), gname, "virtual")
+				prometheus.GaugeValue, float64(gcounts.Memory.VirtualBytes), gname, "virtual", gcounts.Username)
 			ch <- prometheus.MustNewConstMetric(membytesDesc,
-				prometheus.GaugeValue, float64(gcounts.Memory.VmSwapBytes), gname, "swapped")
+				prometheus.GaugeValue, float64(gcounts.Memory.VmSwapBytes), gname, "swapped", gcounts.Username)
 			ch <- prometheus.MustNewConstMetric(startTimeDesc,
 				prometheus.GaugeValue, float64(gcounts.OldestStartTime.Unix()), gname)
 			ch <- prometheus.MustNewConstMetric(openFDsDesc,
@@ -276,9 +285,9 @@ func (p *NamedProcessCollector) scrape(ch chan<- prometheus.Metric) {
 			ch <- prometheus.MustNewConstMetric(worstFDRatioDesc,
 				prometheus.GaugeValue, float64(gcounts.WorstFDratio), gname)
 			ch <- prometheus.MustNewConstMetric(cpuSecsDesc,
-				prometheus.CounterValue, gcounts.CPUUserTime, gname, "user")
+				prometheus.CounterValue, gcounts.CPUUserTime, gname, "user", gcounts.Username)
 			ch <- prometheus.MustNewConstMetric(cpuSecsDesc,
-				prometheus.CounterValue, gcounts.CPUSystemTime, gname, "system")
+				prometheus.CounterValue, gcounts.CPUSystemTime, gname, "system", gcounts.Username)
 			ch <- prometheus.MustNewConstMetric(readBytesDesc,
 				prometheus.CounterValue, float64(gcounts.ReadBytes), gname)
 			ch <- prometheus.MustNewConstMetric(writeBytesDesc,
@@ -311,9 +320,9 @@ func (p *NamedProcessCollector) scrape(ch chan<- prometheus.Metric) {
 
 			if p.smaps {
 				ch <- prometheus.MustNewConstMetric(membytesDesc,
-					prometheus.GaugeValue, float64(gcounts.Memory.ProportionalBytes), gname, "proportionalResident")
+					prometheus.GaugeValue, float64(gcounts.Memory.ProportionalBytes), gname, "proportionalResident", gcounts.Username)
 				ch <- prometheus.MustNewConstMetric(membytesDesc,
-					prometheus.GaugeValue, float64(gcounts.Memory.ProportionalSwapBytes), gname, "proportionalSwapped")
+					prometheus.GaugeValue, float64(gcounts.Memory.ProportionalSwapBytes), gname, "proportionalSwapped", gcounts.Username)
 			}
 
 			if p.threads {

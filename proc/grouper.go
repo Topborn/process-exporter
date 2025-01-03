@@ -37,6 +37,7 @@ type (
 		Wchans map[string]int
 		Procs  int
 		Memory
+		Username        string
 		OldestStartTime time.Time
 		OpenFDs         uint64
 		WorstFDratio    float64
@@ -82,6 +83,10 @@ func groupadd(grp Group, ts Update) Group {
 	grp.States.Add(ts.States)
 	if grp.OldestStartTime == zeroTime || ts.Start.Before(grp.OldestStartTime) {
 		grp.OldestStartTime = ts.Start
+	}
+
+	if grp.Username == "" {
+		grp.Username = ts.Username
 	}
 
 	if grp.Wchans == nil {

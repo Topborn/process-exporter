@@ -61,6 +61,7 @@ type (
 		lastaccum Delta
 		// groupName is the tag for this proc given by the namer.
 		groupName string
+		userName  string
 		threads   map[ThreadID]trackedThread
 	}
 
@@ -76,6 +77,7 @@ type (
 	Update struct {
 		// GroupName is the name given by the namer to the process.
 		GroupName string
+		Username  string
 		// Latest is how much the counts increased since last cycle.
 		Latest Delta
 		// Memory is the current memory usage.
@@ -124,6 +126,7 @@ func (tp *trackedProc) getUpdate() Update {
 		Start:      tp.static.StartTime,
 		NumThreads: tp.metrics.NumThreads,
 		States:     tp.metrics.States,
+		Username:   tp.static.ProcessUser,
 		Wchans:     make(map[string]int),
 	}
 	if tp.metrics.Wchan != "" {

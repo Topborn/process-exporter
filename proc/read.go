@@ -3,6 +3,7 @@ package proc
 import (
 	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -31,6 +32,7 @@ type (
 		Name         string
 		Cmdline      []string
 		Cgroups      []string
+		ProcessUser  string
 		ParentPid    int
 		StartTime    time.Time
 		EffectiveUID int
@@ -394,11 +396,20 @@ func (p *proccache) GetStatic() (Static, error) {
 		}
 	}
 
+	// Get the effective UID from /proc/<pid>/status.
+	procUser, _ := user.LookupId(strconv.Itoa(int(status.UIDs[1])))
+	username := ""
+
+	if procUser != nil {
+		username = procUser.Username
+	}
+
 	return Static{
 		Name:         stat.Comm,
 		Cmdline:      cmdline,
 		Cgroups:      cgroupsStr,
 		ParentPid:    stat.PPID,
+		ProcessUser:  username,
 		StartTime:    startTime,
 		EffectiveUID: int(status.UIDs[1]),
 	}, nil
